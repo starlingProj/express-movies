@@ -2,6 +2,8 @@
 
 A REST API for managing movies with user authentication, built with Express.js and Sequelize ORM.
 
+> 📖 **Architecture Documentation**: See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture explanation and technical documentation.
+
 ## Features
 
 - 🔐 JWT-based authentication
