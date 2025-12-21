@@ -1,0 +1,22 @@
+node_modules/
+package-lock.json
+
+.env
+
+*.sqlite
+*.db
+dev.sqlite
+
+# Build
+build/
+dist/
+
+.idea/
+.vscode/
+
+logs/
+*.log
+npm-debug.log*
+
+.DS_Store
+Thumbs.db
