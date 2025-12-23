@@ -8,7 +8,7 @@ class TokenService {
    * @returns {string} The generated JWT.
    */
   generateToken(payload) {
-    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '30m' });
+    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '45m' });
   }
 
   /**

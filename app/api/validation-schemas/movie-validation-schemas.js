@@ -215,23 +215,35 @@ const movieImportValidation = [
 
 /**
  * Validates an array of actor names.
- * Ensures that all elements in the array are strings, are not empty,
- * and do not exceed 255 characters in length.
+ * Ensures that each actor name is a non-empty string, does not exceed the maximum length,
+ * and contains only valid characters as defined by the `ACTOR_NAME_REGEX`.
  *
- * @param {string[]} actors - The array of actor names to validate.
- * @throws {Error} If any actor is not a string, is empty, or exceeds 255 characters.
- * @returns {boolean} Returns true if all validations pass.
+ * @param {Array<string>} actors - The array of actor names to validate.
+ * @returns {boolean} Returns `true` if all actor names are valid.
+ * @throws {Error} If any actor name is not a string, is empty, exceeds 255 characters,
+ *                 or contains invalid characters.
  */
 function validateActors(actors) {
-  if (!actors.every(actor => typeof actor === "string")) {
-    throw new Error("All actors must be strings");
+  for (const actor of actors) {
+    if (typeof actor !== "string") {
+      throw new Error("All actors must be strings");
+    }
+
+    const name = actor.trim();
+
+    if (!name) {
+      throw new Error("Actor names cannot be empty");
+    }
+
+    if (name.length > 255) {
+      throw new Error("Actor name cannot exceed 255 characters");
+    }
+
+    if (!MovieConstants.ACTOR_NAME_REGEX.test(name)) {
+      throw new Error("Actor name contains invalid characters");
+    }
   }
-  if (!actors.every(actor => actor.trim().length > 0)) {
-    throw new Error("Actor names cannot be empty");
-  }
-  if (!actors.every(actor => actor.trim().length <= 255)) {
-    throw new Error("Actor name cannot exceed 255 characters");
-  }
+
   return true;
 }
 

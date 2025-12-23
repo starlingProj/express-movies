@@ -29,12 +29,20 @@ MovieModel.init({
     validate: {
       isIn: [MovieConstants.VALID_FORMATS]
     },
+  },
+  searchTitle: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    field: 'search_title'
   }
 }, {
   sequelize,
   modelName: "movie",
   tableName: "movies",
   underscored: false,
+  defaultScope: {
+    attributes: { exclude: ['searchTitle'] }
+  },
   indexes: [
     {
       fields: ['title'],
@@ -43,6 +51,14 @@ MovieModel.init({
     {
       fields: ['year'],
       name: 'idx_movies_year'
+    },
+    {
+      fields: ['search_title'],
+      name: 'idx_movies_search_title'
+    },
+    {
+      fields: ['title', 'year', 'format'],
+      name: 'idx_movies_title_year_format'
     }
   ]
 });

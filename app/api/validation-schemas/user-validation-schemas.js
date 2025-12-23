@@ -30,8 +30,15 @@ const userCreateValidation = [
     .isString()
     .withMessage("Password has invalid type (expected string)")
     .bail()
-    .isLength({ min: 6 })
-    .withMessage("Password has invalid length (expected at least 6 characters)"),
+    .custom((value) => {
+      if (value.startsWith(" ") || value.endsWith(" ")) {
+        throw new Errors.PasswordLeadingOrTrailingWhitespace();
+      }
+      return true;
+    })
+    .bail()
+    .isLength({ min: 6, max: 64 })
+    .withMessage("Password has invalid length (expected 6–64 characters)"),
 
   body("confirmPassword")
     .exists({ checkFalsy: true })

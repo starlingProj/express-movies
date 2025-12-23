@@ -10,7 +10,10 @@ MovieModel.belongsToMany(ActorModel, {
 });
 
 ActorModel.belongsToMany(MovieModel, {
-  through: 'movie_actors',
+  through: {
+    model: "movie_actors",
+    unique: true
+  },
   foreignKey: 'actorId',
   otherKey: 'movieId',
   as: 'movies'

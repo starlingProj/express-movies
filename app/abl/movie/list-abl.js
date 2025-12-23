@@ -1,4 +1,5 @@
 const MovieDto = require("../../components/dto/movie-dto");
+const { DefaultValueMap } = require("../../constants/movie-constants");
 
 class ListAbl {
   constructor(movieDao) {
@@ -10,7 +11,7 @@ class ListAbl {
     const { itemList, total } = await this.movieDao.list(MovieDto.prepareListDtoIn(dtoIn));
 
     // Return movie list
-    return { data: itemList, meta: { total }, status: 1 };
+    return { data: itemList, meta: { total, pageSize: dtoIn.limit || DefaultValueMap.LIMIT }, status: 1 };
   }
 }
 
