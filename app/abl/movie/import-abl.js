@@ -3,9 +3,6 @@ const { Import } = require("../../api/errors/movie-errors");
 const { toCamelCase } = require("../../components/helpers/text-helper");
 const MovieConstants = require("../../constants/movie-constants");
 
-const MOVIE_FILE_TEXT_FIELDS = ["Title", "Release Year", "Format", "Stars"];
-const ACTOR_NAME_REGEX = /^[a-zA-ZÀ-ž.'\- ]+$/;
-
 class ImportAbl {
   constructor(movieDao) {
     this.movieDao = movieDao;
@@ -16,12 +13,16 @@ class ImportAbl {
     const createManyMoviesDtoIn = this.#parseMoviesFile(dtoIn.file);
 
     // Bulk create movies
-    const { itemList, total } = await this.movieDao.createMany(createManyMoviesDtoIn);
+    const { itemList, total, skipped = 0 } = await this.movieDao.createMany(createManyMoviesDtoIn);
 
     // Return import result
     return {
       data: itemList,
-      meta: { imported: createManyMoviesDtoIn.length, total },
+      meta: {
+        imported: itemList.length,
+        duplicates: skipped,
+        total
+      },
       status: 1
     };
   }
@@ -82,14 +83,14 @@ class ImportAbl {
     const parsedBlock = {};
     const missingFields = [];
 
-    if (Object.values(block).length !== MOVIE_FILE_TEXT_FIELDS.length) {
+    if (Object.values(block).length !== MovieConstants.MOVIE_FILE_TEXT_FIELDS.length) {
       throw new Import.InvalidFileContent({
         block,
-        errorDetail: `Movie block must contain exactly [${MOVIE_FILE_TEXT_FIELDS.join(", ")}] fields`
+        errorDetail: `Movie block must contain exactly [${MovieConstants.MOVIE_FILE_TEXT_FIELDS.join(", ")}] fields`
       });
     }
 
-    for (const field of MOVIE_FILE_TEXT_FIELDS) {
+    for (const field of MovieConstants.MOVIE_FILE_TEXT_FIELDS) {
       const prefix = `${field.toLowerCase()}:`;
 
       const line = block.find(line =>
@@ -116,19 +117,30 @@ class ImportAbl {
   }
 
   /**
-   * Validates the properties of a movie block object.
+   * Validates the fields of a movie block.
    *
    * @private
-   * @param {Object} textBlock - The movie block object to validate.
-   * @param {string} textBlock.releaseYear - The release year of the movie.
-   * @param {string} textBlock.format - The format of the movie (e.g., VHS, DVD, Blu-Ray).
-   * @param {string} textBlock.stars - A comma-separated list of actor names.
-   * @param {string} textBlock.title - The title of the movie.
-   * @throws {Import.InvalidInputData} If the release year is invalid.
-   * @throws {Import.InvalidFileContent} If the format, stars, or title are invalid.
+   * @param {Object} textBlock - The movie block to validate.
+   * @throws {Import.InvalidInputData|Import.InvalidFileContent} If any validation fails.
    */
   #validateMovieBlock(textBlock) {
-    // Release year validation
+    this.#releaseYearValidation(textBlock);
+
+    this.#formatValidation(textBlock);
+
+    this.#actorsValidation(textBlock);
+
+    this.#titleValidation(textBlock);
+  }
+
+  /**
+   * Validates the release year of a movie.
+   *
+   * @private
+   * @param {Object} textBlock - The movie block containing the release year.
+   * @throws {Import.InvalidInputData} If the release year is not a valid number or out of range.
+   */
+  #releaseYearValidation(textBlock) {
     const year = parseInt(textBlock.releaseYear, 10);
     if (!Number.isInteger(year) || year < MovieConstants.MIN_YEAR || year > MovieConstants.MAX_YEAR) {
       throw new Import.InvalidInputData({
@@ -136,8 +148,16 @@ class ImportAbl {
         errorDetail: `Release year must be a number between ${MovieConstants.MIN_YEAR} and ${MovieConstants.MAX_YEAR}`
       });
     }
+  }
 
-    // Format validation
+  /**
+   * Validates the format of a movie.
+   *
+   * @private
+   * @param {Object} textBlock - The movie block containing the format.
+   * @throws {Import.InvalidFileContent} If the format is not valid.
+   */
+  #formatValidation(textBlock) {
     if (!MovieConstants.VALID_FORMATS.includes(textBlock.format)) {
       throw new Import.InvalidFileContent({
         textBlock,
@@ -145,8 +165,16 @@ class ImportAbl {
         expectedValues: MovieConstants.VALID_FORMATS
       });
     }
+  }
 
-    // Stars validation
+  /**
+   * Validates the actors in a movie block.
+   *
+   * @private
+   * @param {Object} textBlock - The movie block containing the actors.
+   * @throws {Import.InvalidFileContent} If the actors field is empty, contains invalid names, or names are too long.
+   */
+  #actorsValidation(textBlock) {
     const actors = textBlock.stars
       .split(",")
       .map(a => a.trim())
@@ -167,15 +195,23 @@ class ImportAbl {
         });
       }
 
-      if (!ACTOR_NAME_REGEX.test(actor)) {
+      if (!MovieConstants.ACTOR_NAME_REGEX.test(actor)) {
         throw new Import.InvalidFileContent({
           textBlock,
           errorDetail: `Actor name contains invalid characters: "${actor}"`
         });
       }
     }
+  }
 
-    // Title validation
+  /**
+   * Validates the title of a movie.
+   *
+   * @private
+   * @param {Object} textBlock - The movie block containing the title.
+   * @throws {Import.InvalidFileContent} If the title is empty or exceeds the maximum length.
+   */
+  #titleValidation(textBlock) {
     if (!textBlock.title?.length) {
       throw new Import.InvalidFileContent({
         textBlock,

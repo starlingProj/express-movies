@@ -1,9 +1,4 @@
-const DefaultValueMap = {
-  limit: 20,
-  offset: 0,
-  sort: "id",
-  order: "ASC",
-};
+const { DefaultValueMap } = require("../../constants/movie-constants");
 
 /**
  * Data Transfer Object (DTO) for movies.
@@ -63,10 +58,10 @@ class MovieDto {
    */
   prepareListDtoIn(dtoIn) {
     return {
-      limit: dtoIn.limit || DefaultValueMap.limit,
-      offset: dtoIn.offset || DefaultValueMap.offset,
-      sort: dtoIn.sort || DefaultValueMap.sort,
-      order: dtoIn.order || DefaultValueMap.order,
+      limit: Number(dtoIn.limit) || DefaultValueMap.LIMIT,
+      offset: Number(dtoIn.offset) || DefaultValueMap.OFFSET,
+      sort: dtoIn.sort || DefaultValueMap.SORT,
+      order: dtoIn.order || DefaultValueMap.ORDER,
       title: dtoIn.title,
       actor: dtoIn.actor,
       search: dtoIn.search,

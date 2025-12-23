@@ -9,6 +9,9 @@ A REST API for managing movies with user authentication, built with Express.js a
 - 🔐 JWT-based authentication
 - 🎬 Movie CRUD operations
 - 📤 Bulk movie import from file
+- 🧯 Duplicate movie protection (create + import)
+- 🔎 Case-insensitive search that works with Ukrainian characters (via normalized fields)
+- 🔤 Locale-aware title sorting (including Ukrainian)
 - ✅ Input validation and error handling
 - 🧪 Comprehensive test suite
 - 🐳 Docker support
@@ -59,7 +62,6 @@ JWT_SECRET=your-secret-key-here
 
 # Optional (defaults shown)
 APP_PORT=3000
-JWT_EXPIRES_IN=30m
 PASSWORD_SALT_ROUNDS=10
 DB_STORAGE=./app/config/dev.sqlite
 DB_LOGGING=false
@@ -369,6 +371,13 @@ Most endpoints require JWT authentication. Include the token in the `Authorizati
 Authorization: Bearer <your-jwt-token>
 ```
 
+**Token expiration:** the JWT token currently expires in **45 minutes**.
+
+### Password rules
+
+- Password length: **6–64** characters
+- Password cannot start or end with whitespace
+
 ### Endpoints
 
 #### User Management
@@ -426,7 +435,7 @@ Returns a JWT token for authenticated requests.
 **List Movies**
 
 ```http
-GET /api/v1/movies?limit=10&offset=0&sort=id&order=ASC&title=search&actor=actor&search=term
+GET /api/v1/movies?limit=10&offset=0&sort=title&order=ASC&title=search&actor=actor&search=term
 Authorization: Bearer <token>
 ```
 
@@ -434,7 +443,7 @@ Authorization: Bearer <token>
 
 - `limit` (optional): Number of items per page (1-100, default: 20)
 - `offset` (optional): Number of items to skip (default: 0)
-- `sort` (optional): Sort field - `id`, `title`, or `year` (default: `id`)
+- `sort` (optional): Sort field - `id`, `title`, or `year` (default: `title`)
 - `order` (optional): Sort order - `ASC` or `DESC` (default: `ASC`)
 - `title` (optional): Filter by movie title
 - `actor` (optional): Filter by actor name
@@ -459,7 +468,8 @@ Authorization: Bearer <token>
     }
   ],
   "meta": {
-    "total": 100
+    "total": 100,
+    "pageSize": 20
   },
   "status": 1
 }
@@ -588,7 +598,8 @@ Stars: Actor4, Actor5
     ...
   ],
   "meta": {
-    "imported": 10,
+    "imported": 8,
+    "duplicates": 2,
     "total": 10
   },
   "status": 1
@@ -612,11 +623,13 @@ All errors follow this format:
 **Common Error Codes:**
 
 - `invalidInputData` - Validation failed (400)
+- `passwordLeadingOrTrailingWhitespace` - Password cannot start/end with whitespace (400)
 - `unauthorized` - Not authenticated (401)
 - `invalidToken` - Invalid or expired token (401)
 - `tokenMissing` - No token provided (401)
 - `notFound` - Resource not found (404)
 - `movieDoesNotExist` - Movie not found (404)
+- `movieAlreadyExists` - Duplicate movie (same title/year/format + actors set) (409)
 - `emailAlreadyExists` - Email already registered (409)
 - `invalidCredentials` - Wrong email/password (401)
 
@@ -659,7 +672,6 @@ express-movies/
 |------------------------|----------|---------------------------|-----------------------------------------|
 | `JWT_SECRET`           | Yes      | -                         | Secret key for JWT token signing        |
 | `APP_PORT`             | No       | `3000`                    | Port for the application server         |
-| `JWT_EXPIRES_IN`       | No       | `30m`                     | JWT token expiration time               |
 | `PASSWORD_SALT_ROUNDS` | No       | `10`                      | Bcrypt salt rounds for password hashing |
 | `DB_STORAGE`           | No       | `./app/config/dev.sqlite` | SQLite database file path               |
 | `DB_LOGGING`           | No       | `false`                   | Enable SQL query logging                |

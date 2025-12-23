@@ -21,6 +21,10 @@ test("movie/create: using factory with mocked DAO", async () => {
         format: dtoIn.format,
         actors: dtoIn.actors.map(name => ({ id: 1, name }))
       };
+    },
+    listByTitleYearAndFormat: async (title, year, format) => {
+      // Simulate no duplicates found
+      return null;
     }
   };
 

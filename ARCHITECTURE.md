@@ -133,33 +133,37 @@ express-movies/
 ## Component Responsibilities
 
 ### Controller Layer
+
 - **Purpose**: Handle HTTP requests and responses
 - **Location**: `app/api/controllers/`
 - **Responsibilities**:
-  - Extract data from requests
-  - Call ABL methods
-  - Set HTTP status codes
-  - Return JSON responses
+    - Extract data from requests
+    - Call ABL methods
+    - Set HTTP status codes
+    - Return JSON responses
 
 ### ABL Layer (Application Business Logic)
+
 - **Purpose**: Implement business rules
 - **Location**: `app/abl/`
 - **Responsibilities**:
-  - Business validation
-  - Orchestrate operations
-  - Coordinate services
-  - Throw domain errors
+    - Business validation
+    - Orchestrate operations
+    - Coordinate services
+    - Throw domain errors
 
 ### DAO Layer (Data Access Object)
+
 - **Purpose**: Database operations
 - **Location**: `app/dao/`
 - **Responsibilities**:
-  - Execute database queries
-  - Manage transactions
-  - Handle associations
-  - Return plain objects
+    - Execute database queries
+    - Manage transactions
+    - Handle associations
+    - Return plain objects
 
 ### Middleware
+
 - **Authentication**: Verifies JWT tokens
 - **Validation**: Validates request data
 - **Error Handler**: Centralized error processing
@@ -172,7 +176,6 @@ express-movies/
 
 ```mermaid
 erDiagram
-    USERS ||--o{ SESSIONS : has
     MOVIES ||--o{ MOVIE_ACTORS : has
     ACTORS ||--o{ MOVIE_ACTORS : has
     
@@ -186,6 +189,7 @@ erDiagram
     MOVIES {
         int id PK
         string title
+        string search_title
         int year
         string format
     }
@@ -193,6 +197,7 @@ erDiagram
     ACTORS {
         int id PK
         string name
+        string search_name
     }
     
     MOVIE_ACTORS {
@@ -204,23 +209,30 @@ erDiagram
 ### Tables
 
 **users**
+
 - Stores user accounts with hashed passwords
 
 **movies**
+
 - Stores movie information (title, year, format)
 
 **actors**
+
 - Stores actor names
 
 **movie_actors**
+
 - Junction table for many-to-many relationship
 - CASCADE DELETE on movie deletion
 
 ### Indexes
 
 - `idx_movies_title` - for title searches
+- `idx_movies_search_title` - for case-insensitive title search (normalized field)
 - `idx_movies_year` - for year sorting
+- `idx_movies_title_year_format` - helps duplicate checks (title + year + format)
 - `idx_actors_name` - for actor searches
+- `idx_actors_search_name` - for case-insensitive actor search (normalized field)
 - `idx_users_email` - unique index for email lookups
 
 ---
@@ -252,9 +264,14 @@ sequenceDiagram
 ### Security Features
 
 - **Password Hashing**: bcrypt with configurable rounds
-- **JWT Tokens**: Signed tokens with expiration
+- **JWT Tokens**: Signed tokens with expiration (**45 minutes**)
 - **Input Validation**: All inputs validated
 - **SQL Injection Protection**: ORM with parameterized queries
+
+### Startup Safety
+
+- **Environment validation**: app fails fast if `JWT_SECRET` is missing or empty.
+- **404 handling**: unknown routes return a standardized `notFound` error response.
 
 ---
 
@@ -322,7 +339,6 @@ JWT_SECRET=your-secret-key-here-minimum-32-characters
 
 # Optional
 APP_PORT=3000
-JWT_EXPIRES_IN=30m
 PASSWORD_SALT_ROUNDS=10
 DB_STORAGE=./app/config/dev.sqlite
 DB_LOGGING=false
@@ -338,6 +354,7 @@ npm run dev
 ```
 
 **Expected Output:**
+
 ```
 Database Connected
 App is running on port 3000
@@ -389,11 +406,14 @@ npm test
 ## API Endpoints
 
 ### Base URL
+
 - **Local**: `http://localhost:3000/api/v1`
 - **Docker**: `http://localhost:8000/api/v1`
 
 ### Authentication
+
 Include JWT token in `Authorization` header:
+
 ```
 Authorization: Bearer <your-jwt-token>
 ```
@@ -416,23 +436,27 @@ Authorization: Bearer <your-jwt-token>
 ### Transaction Management
 
 Critical operations use database transactions:
+
 - Movie creation (movie + actors)
 - Movie update (movie + actors)
 - Bulk import (multiple movies)
 
+### Duplicate Handling
+
+- **Create movie**: ABL checks duplicates by `title + year + format` and compares the **set of actors**. If the same movie exists, returns `movieAlreadyExists` (409).
+- **Import movies**: DAO filters duplicates during bulk creation and returns `skipped` count; Import ABL exposes it as `meta.duplicates`.
+
+### International Search & Sorting (Ukrainian-friendly)
+
+- **Search**: SQLite `LOWER()` is not reliable for Ukrainian/non-ASCII. The app stores normalized fields:
+    - `movies.search_title` (from `title.toLowerCase()`)
+    - `actors.search_name` (from `name.toLowerCase()`)
+      and searches against those fields (indexed).
+- **Sorting**: Title sorting uses `Intl.Collator("und", ...)` for locale-aware ordering across languages, including Ukrainian characters.
+
 ### Dependency Injection
 
 Factory functions allow injecting dependencies for testing:
-
-```javascript
-// Production
-const { CreateAbl } = require('./app/abl/movie');
-
-// Testing
-const { createMovieAbls } = require('./app/abl/movie');
-const mockDao = { create: async () => ({ id: 1 }) };
-const { CreateAbl } = createMovieAbls({ movieDao: mockDao });
-```
 
 ### Data Validation
 
@@ -445,11 +469,13 @@ const { CreateAbl } = createMovieAbls({ movieDao: mockDao });
 ## Summary
 
 The Express Movies API uses a clean, layered architecture that separates:
+
 - **HTTP handling** (Controllers)
 - **Business logic** (ABL)
 - **Data access** (DAO)
 
 This structure provides:
+
 - Clear separation of concerns
 - Easy testing with dependency injection
 - Maintainable and scalable code

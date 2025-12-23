@@ -61,4 +61,15 @@ class NotFound extends MainError {
   }
 }
 
-module.exports = { InvalidInputData, PasswordConfirmationMismatch, InvalidToken, TokenMissing, Unauthorized, NotFound };
+class PasswordLeadingOrTrailingWhitespace extends MainError {
+  constructor(paramMap = {}) {
+    super({
+      message: "Password cannot start or end with whitespace",
+      code: "passwordLeadingOrTrailingWhitespace",
+      statusCode: 400,
+      paramMap
+    });
+  }
+}
+
+module.exports = { InvalidInputData, PasswordConfirmationMismatch, PasswordLeadingOrTrailingWhitespace, InvalidToken, TokenMissing, Unauthorized, NotFound };

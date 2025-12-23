@@ -1,5 +1,18 @@
 const MainError = require("./main-error");
 
+const Create = {
+  MovieAlreadyExists: class extends MainError {
+    constructor(paramMap = {}) {
+      super({
+        message: "Movie with the same attributes already exists",
+        code: "movieAlreadyExists",
+        statusCode: 409,
+        paramMap
+      });
+    }
+  }
+};
+
 const Common = {
   MovieDoesNotExist: class extends MainError {
     constructor(paramMap = {}) {
@@ -81,4 +94,4 @@ const Import = {
   }
 };
 
-module.exports = { Common, Import };
+module.exports = { Common, Import, Create };
